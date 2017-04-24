@@ -1,58 +1,136 @@
-from PIL import Image, ImageFilter 
+from PIL import Image
 import multiprocessing as mp
+import threading
 import time
 
-
-
 img = Image.open('house.png')
-img.show() # show original image
-pix = img.load() # get the pixels
+newImg = img.copy()
+currentPix = img.load() # get the pixels
+newPix = newImg.load() # get the pixels
 
-#print(pix[100,346]) # Passing an x and y value to pix will return a tuple of the form (R, G, B)
 
-# This function makes the image (or part of the image) vertically symmetric
-def flip(width, height):
+"""To add a new function:
+	give it the same 4 arguments as seen in mirrorRightToLeft
+	width is the width of the image
+	height is the last horizontal line the function is tasked with dealing with
+	step is how many lines the function is tasked with dealing with
+	que is the queue... honestly we might be able to remove this unless we need per-thread timing
+	
+	The first scan line you deal with will be height-step
+	The last will just be height.
+	
+	After you get your function written, add it to  the options variable in main.
+"""
+def mirrorRightToLeft(width, height, step, que):
+	global newImg
+	global currentPix
+	global newPix
+	# Record time for function
+	ftime = time.time()
+	# make image symmetric about a vertical axis
 	for x in range(int(width/2)):
-		for y in range(height):
-			pix[x,y] = pix[width-1-x, y]
-	img.save('new-house.png')
-	'''uncommenting the following the statement will show the result of each process'''
-	#img.show()              
+		for y in range(height-step,height):
+			try:
+				newPix[x,y] = currentPix[width-1-x, y]
+			except IndexError:
+				print("INDEX ERROR AT:", (x,y))
+				exit()
+
+def mirrorLeftToRight(width, height, step, que):
+	global newImg
+	global currentPix
+	global newPix
+	# Record time for function
+	ftime = time.time()
+	# make image symmetric about a vertical axis
+	for x in range(int(width/2)+1, width):
+		for y in range(height-step,height):
+			try:
+				newPix[x,y] = currentPix[width-1-x, y]
+			except IndexError:
+				print("INDEX ERROR AT:", (x,y))
+				exit()	
+
 
 def main():
-        input_var = ""
-        while input_var != "3": #keeps continuing loop until user want to quit proggram
-                input_var = input("Enter the number of editing choice:\n 1: flip\n 2: blur\n 3: quit\n")
-                if input_var == "3": #quit program
-                        print("Quit processed.")
-                                
-                elif input_var != "3":
-                        
-                        while not ("0" < input_var < "4"): #ensures valid entry
-                                print("Invalid entry.\n")
-                                input_var = input("Enter the number of editing choice:\n 1: flip\n 2: blur\n 3: quit\n")  
+	global img
+	global newImg
+	global currentPix
+	global newPix
+	que = mp.Queue()
 
-                        if input_var == "1":
-                                function = flip
-                                
-                        elif input_var == "2":
-                                function = blur
+	width, height = img.size
 
-                                
-                        width, height = img.size
-                        cores = mp.cpu_count() # get the number of cores
-                        processes = []
+	cores = mp.cpu_count() # get the number of cores
+	imageNumber = 0
+	#define function options
+	options ={
+		0: mirrorRightToLeft,
+		1: mirrorLeftToRight
+	}
+	input_var = str(" ")
+	while(input_var != 'q'):
+		print "Function options:"
+		
+		print options #this is temporary, we'll get a nicer way to print options later.
+		
+		input_var = raw_input("Enter the character of editing choice or 'q' to quit:")
+		if input_var.lower() == 'q':
+			print "Quitting..."
+			exit(0);
+		function = mirrorRightToLeft #default function is fliip	
+		try:
+			function = options[int(input_var)]
+		except IndexError:
+			print "ERROR: Invalid function option: " + input_var
+			print "Input number not mapped to function"
+			continue
+		except KeyError:
+			print "ERROR: Invalid function option: " + input_var
+			print "Input number not mapped to function"
+			continue
+		except ValueError:
+			print "ERROR: Input was not an integer or q: " + input_var
+			continue
+			
+		#tell the user what they've chosen
+		print "Running " + function.__name__ + "..."
+		newImg = img.copy()
+		currentPix = img.load() # get the pixels
+		newPix = newImg.load() # get the pixels
+		threads = []
+		# Determine how to divide up the image; divide the height of the image by the number of cores
+		# e.g., if step comes out to say 75, then each process will work on 75 pixels (height-wise)
+		step = height//cores
+		remaining = height%cores
+		start = time.time()
+		currentLine = 0
+		for i in range(cores):
+			# Every process will get the same width, but a different height
+			lines = step # the minimum number of lines a thread will take
+			if(remaining > 0): #if there are remaining lines, add 1 to lines and remove from remaining
+				lines = lines + 1
+				remaining = remaining - 1
+			currentLine = currentLine + lines
+			t = threading.Thread(target= function,args = [width, currentLine, lines, que])
+			threads.append(t)
+			t.start()
 
-                        for i in range(0, height, int(height/cores)):#range(0, height, steps-->int(height/cores))
-                                p = mp.Process(name = str(input_var) + str(i), target = function, args = [width, i+int(height/cores)]) 
-                                processes.append(p)
-                                p.start()
 
-                        for p in processes:
-                                p.join()
-                        Image.open('new-house.png').show()
+		for t in threads:
+			t.join()
+		
+		
 
-                        
+		print("Elapsed time:", round(time.time() - start, 5))
+		
+		# Show new image
+		#newImg.show()
+		newFName = "NewImage" + str(imageNumber) + ".png"
+		newImg.save(newFName);
+		imageNumber = imageNumber+1
+		print "Image saved as: " + newFName
+		img = newImg
 
 if __name__ == "__main__":
 	main()
