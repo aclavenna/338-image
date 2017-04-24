@@ -8,7 +8,19 @@ newImg = img.copy()
 currentPix = img.load() # get the pixels
 newPix = newImg.load() # get the pixels
 
-results = []
+
+"""To add a new function:
+	give it the same 4 arguments as seen in mirrorRightToLeft
+	width is the width of the image
+	height is the last horizontal line the function is tasked with dealing with
+	step is how many lines the function is tasked with dealing with
+	que is the queue... honestly we might be able to remove this unless we need per-thread timing
+	
+	The first scan line you deal with will be height-step
+	The last will just be height.
+	
+	After you get your function written, add it to  the options variable in main.
+"""
 def mirrorRightToLeft(width, height, step, que):
 	global newImg
 	global currentPix
@@ -108,7 +120,6 @@ def main():
 		for t in threads:
 			t.join()
 		
-		results = []
 		
 
 		print("Elapsed time:", round(time.time() - start, 5))
