@@ -41,6 +41,10 @@ def mirrorLeftToRight(width, height, step, que):
 
 
 def main():
+	global img
+	global newImg
+	global currentPix
+	global newPix
 	que = mp.Queue()
 
 	width, height = img.size
@@ -79,6 +83,9 @@ def main():
 			
 		#tell the user what they've chosen
 		print "Running " + function.__name__ + "..."
+		newImg = img.copy()
+		currentPix = img.load() # get the pixels
+		newPix = newImg.load() # get the pixels
 		threads = []
 		# Determine how to divide up the image; divide the height of the image by the number of cores
 		# e.g., if step comes out to say 75, then each process will work on 75 pixels (height-wise)
@@ -112,6 +119,7 @@ def main():
 		newImg.save(newFName);
 		imageNumber = imageNumber+1
 		print "Image saved as: " + newFName
+		img = newImg
 
 if __name__ == "__main__":
 	main()
