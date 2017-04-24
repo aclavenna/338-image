@@ -31,23 +31,10 @@ def main():
 	que = mp.Queue()
 
 	width, height = img.size
-	#img.show() # show original image
-	# pixels = []
-	# for y in range(height):
-	# 	for x in range(width):
-	# 		pixels.append([x,y])
-	# print(pixels)
-
-	# start = time.time()
-	# flip(width, height, 1, que)
-	# print("Elapsed time:", round(time.time() - start, 5))
-
 
 	cores = mp.cpu_count() # get the number of cores
-	print("CPU Cores:", cores)
 	threads = []
-	print("Width", width);
-	print("Height", height);
+
 	# Determine how to divide up the image; divide the height of the image by the number of cores
 	# e.g., if step comes out to say 75, then each process will work on 75 pixels (height-wise)
 	step = height//cores
