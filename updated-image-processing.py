@@ -1,40 +1,37 @@
 from PIL import Image
 import multiprocessing as mp
+import threading
 import time
 
 img = Image.open('house.png')
-img.show() # show original image
-pix = img.load() # get the pixels
+newImg = img.copy()
+currentPix = img.load() # get the pixels
+newPix = newImg.load() # get the pixels
 
 results = []
 def flip(width, height, step, que):
+	global newImg
+	global currentPix
+	global newPix
 	# Record time for function
 	ftime = time.time()
-	
-	# Array that contains tuples of the form: (XY value, RGB value)
-	temp = []
-
 	# make image symmetric about a vertical axis
 	for x in range(int(width/2)):
 		for y in range(height-step,height):
-			pix[x,y] = pix[width-1-x, y]
-			temp.append(((x,y), pix[x,y]))
-			# img.putpixel((x,y), (pix[x,y]))
-	
-	# Print time for function to execute
-	# print(mp.current_process().name, "time:", round(time.time() - ftime, 5))
+			try:
+				newPix[x,y] = currentPix[width-1-x, y]
+			except IndexError:
+				print("INDEX ERROR AT:", (x,y))
+				exit()
 
-	# Put the results in the queue
-	que.put(temp)
 	
-	#img.show()
-	
+
 
 def main():
 	que = mp.Queue()
 
 	width, height = img.size
-	
+	#img.show() # show original image
 	# pixels = []
 	# for y in range(height):
 	# 	for x in range(width):
@@ -47,41 +44,39 @@ def main():
 
 
 	cores = mp.cpu_count() # get the number of cores
-	processes = []
-
+	print("CPU Cores:", cores)
+	threads = []
+	print("Width", width);
+	print("Height", height);
 	# Determine how to divide up the image; divide the height of the image by the number of cores
 	# e.g., if step comes out to say 75, then each process will work on 75 pixels (height-wise)
-	step = int(height/cores)
-
+	step = height//cores
+	remaining = height%cores
 	start = time.time()
-	for i in range(0, height, step):
+	currentLine = 0
+	for i in range(cores):
 		# Every process will get the same width, but a different height
-		p = mp.Process(name = "process" + str(i), target = flip, args = [width, i+step, step, que])
-		processes.append(p)
-		p.start()
+		lines = step # the minimum number of lines a thread will take
+		if(remaining > 0): #if there are remaining lines, add 1 to lines and remove from remaining
+			lines = lines + 1
+			remaining = remaining - 1
+		currentLine = currentLine + lines
+		t = threading.Thread(target= flip,args = [width, currentLine, lines, que])
+		threads.append(t)
+		t.start()
 
-	''' For some reason, uncommenting this will cause the program to hang. 
-		It has to do with the size of the arrays that we are adding into the queue.'''	
-	# for p in processes:
-	# 	p.join()
+
+	for t in threads:
+		t.join()
 	
 	results = []
 	
-	for i in range(len(processes)):
-		# get an array of pixels from the queue
-		temp = que.get()
-
-		# Assign the new pixels to the image
-		# Because 'temp' is such a large array, this for loop takes a significant amount of time
-		for j in range(len(temp)):
-			# temp[j][0] is the XY value; temp[j][1] is the RGB value
-			img.putpixel(temp[j][0], temp[j][1])
 
 	print("Elapsed time:", round(time.time() - start, 5))
 	
 	# Show new image
-	img.show()
-	
+	#newImg.show()
+	newImg.save("NewImage.png");
 
 if __name__ == "__main__":
 	main()
