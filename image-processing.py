@@ -51,6 +51,43 @@ def mirrorLeftToRight(width, height, step, que):
 				print("INDEX ERROR AT:", (x,y))
 				exit()	
 
+def lapalacian(width, height, step, que):
+	#discrete laplace
+	global newImg
+	global currentPix
+	global newPix
+	
+	kernel = ((0,1,0),(1,-4,1),(0,1,0))
+	for x in range(width):
+		for y in range(height):
+			r = 0
+			g = 0
+			b = 0
+			for xb in range(0,3):
+				for yb in range(0,3):
+					if kernel[xb][yb] != 0:
+						pixel = getPixelWithOverlap(x+xb-1, y+yb-1, width, height)
+						r+= pixel[0] * kernel[xb][yb]
+						g+= pixel[1] * kernel[xb][yb]
+						b+= pixel[2] * kernel[xb][yb]
+			r = r / 9
+			b = b / 9
+			g = g / 9
+			newPix[x,y] = ( r, g, b)
+					
+	
+def getPixelWithOverlap(x,y, width, height):
+	global currentPix
+	
+	if x < 0:
+		x = width + x
+	elif x>=width:
+		x = x-width
+	if y<0:
+		y = height + y
+	elif y>=height:
+		y = y-height
+	return currentPix[x,y]
 
 def main():
 	global img
@@ -61,12 +98,13 @@ def main():
 
 	width, height = img.size
 
-	cores = mp.cpu_count() # get the number of cores
+	print "You have " + str(mp.cpu_count()) + " logical cores." # get the number of cores
 	imageNumber = 0
 	#define function options
 	options ={
 		0: mirrorRightToLeft,
-		1: mirrorLeftToRight
+		1: mirrorLeftToRight,
+		2: lapalacian
 	}
 	input_var = str(" ")
 	while(input_var != 'q'):
@@ -92,9 +130,11 @@ def main():
 		except ValueError:
 			print "ERROR: Input was not an integer or q: " + input_var
 			continue
-			
+		
+		cores = int(raw_input("Enter the number of cores you wish to use:"))
+		
 		#tell the user what they've chosen
-		print "Running " + function.__name__ + "..."
+		print "Running " + function.__name__ + " on " +str(cores)+ " cores..." 
 		newImg = img.copy()
 		currentPix = img.load() # get the pixels
 		newPix = newImg.load() # get the pixels
