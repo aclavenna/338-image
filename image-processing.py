@@ -70,9 +70,9 @@ def lapalacian(width, height, step, que):
 						r+= pixel[0] * kernel[xb][yb]
 						g+= pixel[1] * kernel[xb][yb]
 						b+= pixel[2] * kernel[xb][yb]
-			r = r / 9
-			b = b / 9
-			g = g / 9
+			r = r
+			b = b
+			g = g
 			newPix[x,y] = ( r, g, b)
 					
 	
